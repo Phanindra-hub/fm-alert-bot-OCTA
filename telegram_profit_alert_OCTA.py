@@ -40,14 +40,14 @@ from alpaca.trading.enums import QueryOrderStatus
 
 
 BOT_TOKEN      = os.getenv("BOT_TOKEN")
-SOURCE_CHANNEL = os.getenv("SOURCE_CHANNEL") #"-1003719728720" # bot READS trade picks from here
+SOURCE_CHANNEL = os.getenv("SOURCE_CHANNEL") #"-1002624088628" # bot READS trade picks from here
 ALERT_CHANNEL  = os.getenv("ALERT_CHANNEL")   # bot SENDS profit alerts here
 
 ALPACA_API_KEY    = os.getenv("ALPACA_API_KEY")
 ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET")
 
 LISTENER_INTERVAL  = 60    # Thread 1: check Telegram every 60s
-MONITOR_INTERVAL   = 90    # Thread 2: check prices every 90s
+MONITOR_INTERVAL   = 153    # Thread 2: check prices every 90s
 TIMEZONE           = "US/Central"
 MAX_PICK_AGE_DAYS  = 20    # Auto-remove picks older than this many days
 
@@ -189,7 +189,55 @@ def fetch_updates(offset=None, limit=20):
 def acknowledge_update(update_id: int):
     """Tell Telegram we've processed up to this update_id."""
     fetch_updates(offset=update_id + 1, limit=1)
- 
+
+
+# ─────────────────────────────────────────────
+#  Alert message detector
+#  Since SOURCE_CHANNEL == ALERT_CHANNEL, the
+#  bot will read back its own profit alert posts.
+#  We detect and skip them to avoid false picks.
+#
+#  Skips messages that match either:
+#   (a) Bot's own structured alert format — looks
+#       for the emoji+keyword signatures used in
+#       send_telegram_message() output.
+#   (b) Short-form profit notices posted by admins,
+#       e.g. "COIN $1200+ Profit is Ready"
+# ─────────────────────────────────────────────
+
+# Regex for short-form admin profit notices:
+#   "COIN $1200+ Profit is Ready"
+#   "TSLA $800 Profit is Ready"  etc.
+_SHORT_PROFIT_RE = re.compile(
+    r'\b[A-Z]{1,5}\b\s+\$[\d,]+\+?\s+Profit\s+is\s+Ready',
+    re.IGNORECASE
+)
+
+# Phrases that only appear in bot-generated alert messages
+_BOT_ALERT_SIGNATURES = (
+    "Profit Milestone",          # tier labels in every bot alert
+    "Profit has reached",        # body line of every bot alert
+    "First Profit Milestone",    # tier 1 label
+    "Major Profit Milestone",    # tier 3 label
+    "Exceptional Profit Milestone",  # tier 4 label
+    "#FortuneMarkers",           # hashtag appended to every bot alert
+)
+
+def is_alert_message(text: str) -> bool:
+    """
+    Return True if this message is a profit alert (bot-generated or
+    admin short-form) that should be skipped by the listener.
+    """
+    # (a) Short-form admin notice: "TICKER $NNN+ Profit is Ready"
+    if _SHORT_PROFIT_RE.search(text):
+        return True
+    # (b) Bot's own structured milestone alert
+    for sig in _BOT_ALERT_SIGNATURES:
+        if sig in text:
+            return True
+    return False
+
+
 # ─────────────────────────────────────────────
 #  Price fetch via Alpaca
 # ─────────────────────────────────────────────
@@ -462,6 +510,15 @@ def telegram_listener():
                         print(f"\n[Listener] New message from SOURCE at {ts}:")
                         print(f"  → {raw_text[:]}")
 
+                        # ── Skip profit alerts (bot's own or admin short-form) ──
+                        # Since SOURCE_CHANNEL == ALERT_CHANNEL the bot reads
+                        # back every message it sends.  Profit alerts must never
+                        # be treated as new trade picks.
+                        if is_alert_message(raw_text):
+                            print(f"  ⏭️  Skipped — recognised as a profit alert message")
+                            last_update_id = uid
+                            continue
+
                         trade = parse_trade(raw_text, uid)
                         if trade:
                             add_to_watchlist(trade)
@@ -638,5 +695,3 @@ def main():
  
 if __name__ == "__main__":
     main()
-
- 
