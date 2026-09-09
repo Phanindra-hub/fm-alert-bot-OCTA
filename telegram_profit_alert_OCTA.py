@@ -49,7 +49,7 @@ ALPACA_API_SECRET = os.getenv("ALPACA_API_SECRET")
 LISTENER_INTERVAL  = 60    # Thread 1: check Telegram every 60s
 MONITOR_INTERVAL   = 153    # Thread 2: check prices every 90s
 TIMEZONE           = "US/Central"
-MAX_PICK_AGE_DAYS  = 20    # Auto-remove picks older than this many days
+MAX_PICK_AGE_DAYS  = 40    # Auto-remove picks older than this many days
 
 # Alpaca
 client = StockHistoricalDataClient(ALPACA_API_KEY,  ALPACA_API_SECRET)
