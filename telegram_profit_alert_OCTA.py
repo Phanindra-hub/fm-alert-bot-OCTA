@@ -621,12 +621,12 @@ def alert_monitor():
             
                 msg = (
                     f"{tier_label} — <b>{ticker}</b>\n\n"
-                    f"💵 Profit has reached <b>${highest_level:,.0f}</b>!\n\n"
+                    f"💵 Profit Booking Opportunity has reached <b>${highest_level:,.0f}</b>!\n\n"
                     f"📌 Entry Price:   <b>${entry:.2f}</b>\n"
                     f"💰 Current Price: <b>${price:.2f}</b>\n"
                     f"📦 Quantity:      <b>{qty} shares</b>\n"
-                    f"📈 Total Profit:  <b>${profit:+,.2f} ({pct:+.2f}%)</b>\n\n"
-                    f"📅 Bought on:     <b>{buy_date}</b>\n"
+                    f"📈 Profit Booking Opportunity:  <b>${profit:+,.2f} ({pct:+.2f}%)</b>\n\n"
+                    f"📅 Picked on:     <b>{buy_date}</b>\n"
                     f"📅 Today's date:  <b>{today}</b>\n\n"
                     f"🕐 {now}\n"
                     f"#FortuneMarkers #{ticker}"
